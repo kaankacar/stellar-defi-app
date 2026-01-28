@@ -32,7 +32,6 @@ export default function EarnPage() {
   const [filter, setFilter] = useState<"all" | "low" | "medium" | "high">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [txStatus, setTxStatus] = useState<string | null>(null);
 
   // Load strategies from multiple sources
   const loadStrategies = useCallback(async () => {
@@ -111,16 +110,6 @@ export default function EarnPage() {
     loadStrategies();
   }, [loadStrategies]);
 
-  const handleDeposit = async () => {
-    if (!connected || !address || !selectedStrategy) return;
-
-    // Currently only Blend pools are available
-    // Direct users to the Lend page for deposits
-    setTxStatus("Redirecting to Lend page for deposits...");
-    setTimeout(() => {
-      window.location.href = "/lend";
-    }, 1500);
-  };
 
   const filteredStrategies = strategies.filter(
     (s) => filter === "all" || s.risk.toLowerCase() === filter
@@ -141,12 +130,6 @@ export default function EarnPage() {
           </div>
         )}
 
-        {/* Transaction Status */}
-        {txStatus && (
-          <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400">
-            {txStatus}
-          </div>
-        )}
 
         {/* Protocol Status */}
         <div className="p-3 bg-gray-800/50 rounded-lg text-sm flex items-center gap-6">

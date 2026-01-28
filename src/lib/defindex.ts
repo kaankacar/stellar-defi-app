@@ -32,30 +32,38 @@ export async function getAvailableVaults(): Promise<VaultInfo[]> {
 }
 
 // Get user's positions across vaults - returns empty for now
-export async function getUserVaultPositions(_userAddress: string): Promise<VaultPosition[]> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function getUserVaultPositions(userAddress: string): Promise<VaultPosition[]> {
   return [];
 }
 
 // Build deposit transaction - not implemented
 export async function buildVaultDeposit(
-  _userAddress: string,
-  _vaultAddress: string,
-  _amount: bigint
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  userAddress: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  vaultAddress: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  amount: bigint
 ): Promise<string> {
   throw new Error('DeFindex vault deposits not yet implemented');
 }
 
 // Build withdraw transaction - not implemented
 export async function buildVaultWithdraw(
-  _userAddress: string,
-  _vaultAddress: string,
-  _shares: bigint
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  userAddress: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  vaultAddress: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  shares: bigint
 ): Promise<string> {
   throw new Error('DeFindex vault withdrawals not yet implemented');
 }
 
 // Submit signed transaction - not implemented
-export async function submitVaultTransaction(_signedXdr: string): Promise<{ hash: string }> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function submitVaultTransaction(signedXdr: string): Promise<{ hash: string }> {
   throw new Error('DeFindex transactions not yet implemented');
 }
 
