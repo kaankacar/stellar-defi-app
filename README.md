@@ -12,7 +12,7 @@ A unified DeFi interface built on the **Stellar blockchain** and **Soroban smart
 |---------|--------|-------------|
 | **Swap** | Complete | Route token swaps across Soroswap, Phoenix, Aquarius, and Stellar DEX via the Soroswap aggregator API |
 | **Lend / Borrow** | Complete | Supply collateral, borrow assets, withdraw, repay, and monitor health factor via Blend Protocol |
-| **Earn** | In progress | Browse yield strategies backed by Blend lending pools |
+| **Earn** | Complete | Browse yield strategies backed by Blend lending pools, with risk filter and APY display |
 | **Dashboard** | Complete | Aggregate portfolio view — wallet balances, positions, net APY |
 
 ---
@@ -43,11 +43,13 @@ Wallet state (address, wallet type) is persisted in `localStorage` and managed v
 
 | Protocol | Contract Address | Purpose |
 |----------|-----------------|---------|
-| **Blend Protocol** | `CDVQVKOY2YSXS2IC7KN6MNASSHPAO7UN2UR2ON4OI2SKMFJNVAMDX6DP` | Lending and borrowing — supply, borrow, withdraw, repay |
+| **Blend Protocol v1** | `CDVQVKOY2YSXS2IC7KN6MNASSHPAO7UN2UR2ON4OI2SKMFJNVAMDX6DP` | Lending and borrowing — supply, borrow, withdraw, repay |
 | **Soroswap aggregator** | `api.soroswap.finance` | DEX swap routing — quotes and transaction building |
 | **Phoenix** | via Soroswap aggregator | Token swaps via Phoenix DEX |
 | **Aquarius** | via Soroswap aggregator | Token swaps via Aquarius AMM |
 | **Stellar DEX** | via Soroswap aggregator | Token swaps via the native Stellar DEX (SDEX) |
+
+All contract addresses verified on-chain via Stellar Expert.
 
 ---
 
@@ -236,12 +238,13 @@ npm test           # run all tests once
 npm run test:watch # watch mode
 ```
 
-43+ tests covering:
-- `formatAmount` / `parseAmount` round-trips
-- `getSwapQuote`: correct endpoint, request body (assetIn/assetOut, EXACT_IN, 4 protocols), response mapping, error paths
-- `buildSwapTransaction`: passes raw quote data to build endpoint, returns XDR, error paths
-- DEX aggregation: multi-hop routing, slippage bps, price impact classification, edge cases
-- `getPoolData`: DefiLlama fallback, market shape validation, empty-state handling
+69 tests across 4 files covering:
+- `formatAmount` / `parseAmount` round-trips (blend + soroswap)
+- `getSwapQuote`: correct endpoint, request body (`assetIn`/`assetOut`, `EXACT_IN`, 4 protocols), response mapping, error paths
+- `buildSwapTransaction`: passes raw quote data to build endpoint, returns XDR, handles HTTP errors (429, 503)
+- DEX aggregation: single/multi/3-hop routes, slippage bps, price impact classification, amount encoding
+- Quote → build pipeline: `rawData` is preserved end-to-end
+- `getPoolData`: DefiLlama fallback, market shape validation, utilization bounds, empty-state handling
 
 ---
 
