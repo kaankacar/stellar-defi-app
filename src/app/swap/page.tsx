@@ -5,11 +5,13 @@ import { AppLayout } from "@/components/AppLayout";
 import { useWallet } from "@/contexts/WalletContext";
 import {
   getSwapQuote,
+  buildSwapTransaction,
   formatAmount,
   parseAmount,
   MAINNET_TOKENS,
   type SwapQuote,
 } from "@/lib/soroswap";
+import { submitTransaction } from "@/lib/stellar";
 
 const TOKENS = [
   { symbol: "XLM", name: "Stellar Lumens", address: "native", decimals: 7 },
@@ -19,7 +21,7 @@ const TOKENS = [
 ];
 
 export default function SwapPage() {
-  const { connected, address } = useWallet();
+  const { connected, address, signTransaction } = useWallet();
   const [fromToken, setFromToken] = useState(TOKENS[0]);
   const [toToken, setToToken] = useState(TOKENS[1]);
   const [fromAmount, setFromAmount] = useState("");
@@ -77,14 +79,32 @@ export default function SwapPage() {
 
     setLoading(true);
     setError(null);
-    setTxStatus("Swap functionality coming soon...");
+    setTxStatus("Building swap transaction...");
 
-    // For now, just show that we have the quote
-    // Full transaction building would require the Soroswap SDK server-side
-    setTimeout(() => {
+    try {
+      const xdr = await buildSwapTransaction(quote, address);
+
+      setTxStatus("Please sign in your wallet...");
+      const signedXdr = await signTransaction(xdr);
+
+      setTxStatus("Submitting transaction...");
+      const result = await submitTransaction(signedXdr);
+
+      if (result.status === "SUCCESS") {
+        setTxStatus("Swap successful!");
+        setFromAmount("");
+        setQuote(null);
+        setTimeout(() => setTxStatus(null), 5000);
+      } else {
+        throw new Error(`Transaction failed with status: ${result.status}`);
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      setError(`Swap failed: ${errorMessage}`);
       setTxStatus(null);
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   const formattedOutput = quote

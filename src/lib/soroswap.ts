@@ -14,6 +14,7 @@ export interface SwapQuote {
   priceImpactPct: string;
   route: string[];
   protocols: string[];
+  rawData?: unknown; // Raw API response preserved for building transactions
 }
 
 export interface TokenInfo {
@@ -23,7 +24,7 @@ export interface TokenInfo {
   decimals: number;
 }
 
-// Get a quote for swapping tokens via our API route
+// Get a quote for swapping tokens via the Soroswap aggregator API
 export async function getSwapQuote(
   tokenIn: string,
   tokenOut: string,
@@ -31,22 +32,24 @@ export async function getSwapQuote(
   slippageBps: number = 50
 ): Promise<SwapQuote> {
   try {
-    const response = await fetch('/api/soroswap/quote', {
+    const response = await fetch('https://api.soroswap.finance/quote?network=mainnet', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        tokenIn,
-        tokenOut,
+        assetIn: tokenIn,
+        assetOut: tokenOut,
         amount: amountIn,
+        tradeType: 'EXACT_IN',
+        protocols: ['soroswap', 'phoenix', 'aqua', 'sdex'],
         slippageBps,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `API error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error((errorData as { error?: string }).error || `API error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -54,9 +57,10 @@ export async function getSwapQuote(
     return {
       amountIn: data.amountIn || amountIn,
       amountOut: data.amountOut || '0',
-      priceImpactPct: data.priceImpactPct || '0',
+      priceImpactPct: data.priceImpact || data.priceImpactPct || '0',
       route: data.routePlan?.flatMap((plan: { swapInfo: { path: string[] } }) => plan.swapInfo.path) || [],
       protocols: data.routePlan?.map((plan: { swapInfo: { protocol: string } }) => plan.swapInfo.protocol) || [],
+      rawData: data,
     };
   } catch (error) {
     console.error('Failed to get swap quote:', error);
@@ -64,46 +68,36 @@ export async function getSwapQuote(
   }
 }
 
-// Build a swap transaction (calls our API to build tx server-side)
+// Build a swap transaction via the Soroswap aggregator API
+// Returns an unsigned XDR string ready for wallet signing
 export async function buildSwapTransaction(
-  tokenIn: string,
-  tokenOut: string,
-  amountIn: string,
-  fromAddress: string,
-  slippageBps: number = 50
-): Promise<{ xdr: string; quote: SwapQuote }> {
+  quote: SwapQuote,
+  fromAddress: string
+): Promise<string> {
   try {
-    const response = await fetch('/api/soroswap/build', {
+    const response = await fetch('https://api.soroswap.finance/quote/build?network=mainnet', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        tokenIn,
-        tokenOut,
-        amount: amountIn,
-        fromAddress,
-        slippageBps,
+        quote: quote.rawData,
+        from: fromAddress,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `API error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error((errorData as { error?: string }).error || `API error: ${response.status}`);
     }
 
     const data = await response.json();
 
-    return {
-      xdr: data.xdr,
-      quote: {
-        amountIn: data.quote?.amountIn || amountIn,
-        amountOut: data.quote?.amountOut || '0',
-        priceImpactPct: data.quote?.priceImpactPct || '0',
-        route: data.quote?.routePlan?.flatMap((plan: { swapInfo: { path: string[] } }) => plan.swapInfo.path) || [],
-        protocols: data.quote?.routePlan?.map((plan: { swapInfo: { protocol: string } }) => plan.swapInfo.protocol) || [],
-      },
-    };
+    if (!data.xdr) {
+      throw new Error('No XDR returned from build endpoint');
+    }
+
+    return data.xdr;
   } catch (error) {
     console.error('Failed to build swap transaction:', error);
     throw error;

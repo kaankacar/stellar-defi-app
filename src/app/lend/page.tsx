@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useWallet } from "@/contexts/WalletContext";
+import { horizon } from "@/lib/stellar";
 import {
   getPoolData,
   getUserPositions,
@@ -27,6 +28,7 @@ export default function LendPage() {
   const [error, setError] = useState<string | null>(null);
   const [txStatus, setTxStatus] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
+  const [modalAction, setModalAction] = useState<"supply" | "borrow" | "withdraw" | "repay">("supply");
 
   // Load market data
   const loadData = useCallback(async () => {
@@ -100,6 +102,29 @@ export default function LendPage() {
       setTxStatus(null);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleMax = async () => {
+    if (!address || !selectedMarket) return;
+
+    if (modalAction === "withdraw") {
+      const pos = userPosition?.positions.find(p => p.asset === selectedMarket.asset);
+      if (pos?.supplied) setAmount(pos.supplied);
+    } else if (modalAction === "repay") {
+      const pos = userPosition?.positions.find(p => p.asset === selectedMarket.asset);
+      if (pos?.borrowed) setAmount(pos.borrowed);
+    } else if (modalAction === "supply" && selectedMarket.assetAddress === "native") {
+      try {
+        const account = await horizon.loadAccount(address);
+        const nativeBalance = account.balances.find(b => b.asset_type === "native");
+        if (nativeBalance) {
+          const balance = Math.max(0, parseFloat(nativeBalance.balance) - 1);
+          setAmount(balance.toFixed(7));
+        }
+      } catch (err) {
+        console.error("Failed to fetch balance:", err);
+      }
     }
   };
 
@@ -262,7 +287,11 @@ export default function LendPage() {
                     </td>
                     <td className="px-6 py-4">
                       <button
-                        onClick={() => setSelectedMarket(market)}
+                        onClick={() => {
+                          setSelectedMarket(market);
+                          setModalAction(activeTab === "supply" ? "supply" : "borrow");
+                          setAmount("");
+                        }}
                         disabled={!connected}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors"
                       >
@@ -295,6 +324,40 @@ export default function LendPage() {
                 </button>
               </div>
 
+              <div className="flex gap-2 mb-4">
+                {activeTab === "supply" ? (
+                  <>
+                    <button
+                      onClick={() => { setModalAction("supply"); setAmount(""); }}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modalAction === "supply" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                    >
+                      Supply
+                    </button>
+                    <button
+                      onClick={() => { setModalAction("withdraw"); setAmount(""); }}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modalAction === "withdraw" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                    >
+                      Withdraw
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => { setModalAction("borrow"); setAmount(""); }}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modalAction === "borrow" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                    >
+                      Borrow
+                    </button>
+                    <button
+                      onClick={() => { setModalAction("repay"); setAmount(""); }}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modalAction === "repay" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+                    >
+                      Repay
+                    </button>
+                  </>
+                )}
+              </div>
+
               <div className="space-y-4">
                 <div>
                   <label className="text-sm text-gray-400 block mb-2">Amount</label>
@@ -308,7 +371,7 @@ export default function LendPage() {
                     />
                     <button
                       className="px-4 py-2 bg-gray-800 rounded-lg text-sm hover:bg-gray-700"
-                      onClick={() => {/* TODO: Set max balance */}}
+                      onClick={handleMax}
                     >
                       MAX
                     </button>
@@ -335,11 +398,11 @@ export default function LendPage() {
                 </div>
 
                 <button
-                  onClick={() => handleAction(activeTab)}
+                  onClick={() => handleAction(modalAction)}
                   disabled={actionLoading || !amount}
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
                 >
-                  {actionLoading ? "Processing..." : `${activeTab === "supply" ? "Supply" : "Borrow"} ${selectedMarket.asset}`}
+                  {actionLoading ? "Processing..." : `${modalAction.charAt(0).toUpperCase() + modalAction.slice(1)} ${selectedMarket.asset}`}
                 </button>
               </div>
             </div>
