@@ -8,9 +8,9 @@ export const BLEND_POOLS = {
 
 // Known asset addresses on mainnet
 export const BLEND_ASSETS = {
-  USDC: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75',
+  USDC: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75',  // Circle USDC SAC
   XLM: 'native',
-  yUSDC: 'CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YBVMCMTYF3DQLVVQ6M5P7',
+  yUSDC: 'CDOFW7HNKLUZRLFZST4EW7V3AV4JI5IHMT6BPXXSY2IEFZ4NE5TWU2P4',  // yUSDC by Ultra Capital
 } as const;
 
 export interface MarketData {
@@ -44,11 +44,11 @@ export interface UserPositionSummary {
 
 // Known asset addresses for market generation
 const KNOWN_ASSETS = [
-  { asset: 'USDC', address: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75', share: 0.45, collateralFactor: 85 },
-  { asset: 'yUSDC', address: 'CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YBVMCMTYF3DQLVVQ6M5P7', share: 0.20, collateralFactor: 85 },
-  { asset: 'EURC', address: 'CDTKPWPLOURQA2SGTKTUQOWRCBZEORB4BWBOMJ3D3ZTQQSGE5F6JBQLV', share: 0.15, collateralFactor: 85 },
-  { asset: 'ETH', address: 'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA', share: 0.10, collateralFactor: 75 },
-  { asset: 'BTC', address: 'CDMLFMKMMD7MWZP3FKUBZPVHTUEDLSX4BYGYKH4GCESXYHS3IHQ4EIG4', share: 0.10, collateralFactor: 75 },
+  { asset: 'USDC',  address: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75', share: 0.45, collateralFactor: 85 }, // Circle USDC SAC
+  { asset: 'yUSDC', address: 'CDOFW7HNKLUZRLFZST4EW7V3AV4JI5IHMT6BPXXSY2IEFZ4NE5TWU2P4', share: 0.20, collateralFactor: 85 }, // yUSDC by Ultra Capital
+  { asset: 'EURC',  address: 'CDTKPWPLOURQA2SGTKTUQOWRCBZEORB4BWBOMJ3D3ZTQQSGE5F6JBQLV', share: 0.15, collateralFactor: 85 }, // Circle EURC SAC
+  { asset: 'ETH',   address: 'CBH4M45TQBLDPXOK6L7VYKMEJWFITBOL64BN3WDAIIDT4LNUTWTTOCKF',  share: 0.10, collateralFactor: 75 }, // ETH by Ultra Capital
+  { asset: 'BTC',   address: 'CAO7DDJNGMOYQPRYDY5JVZ5YEK4UQBSMGLAEWRCUOTRMDSBMGWSAATDZ',  share: 0.10, collateralFactor: 75 }, // BTC by Ultra Capital
 ];
 
 function formatNumber(num: number): string {
