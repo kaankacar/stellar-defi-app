@@ -14,7 +14,6 @@ import {
   getSwapQuote,
   buildSwapTransaction,
   MAINNET_TOKENS,
-  XLM_SAC,
 } from '../lib/soroswap';
 import { getPoolData } from '../lib/blend';
 
