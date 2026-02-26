@@ -1,17 +1,19 @@
 # Stellar DeFi Super App
 
-A unified DeFi interface built on the **Stellar blockchain** and **Soroban smart contracts**. The app aggregates multiple DeFi protocols into a single dashboard, letting users swap tokens, lend and borrow assets, and track yield strategies — all from one place.
+A unified DeFi interface built on the **Stellar blockchain** and **Soroban smart contracts**, deployed as a fully static site on **GitHub Pages**. The app aggregates multiple DeFi protocols into a single dashboard — swap tokens, lend/borrow assets, and track your positions, all from one place.
+
+**Live:** https://kaankacar.github.io/stellar-defi-app/
 
 ---
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Swap** | Route token swaps across multiple DEXs via a swap aggregator |
-| **Lend / Borrow** | Supply collateral, borrow assets, and monitor health factor via Blend Protocol |
-| **Earn** | Browse yield strategies backed by Blend lending pools and DeFindex vaults |
-| **Dashboard** | Aggregate portfolio view — wallet balances, supplied/borrowed positions, net APY |
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Swap** | Complete | Route token swaps across Soroswap, Phoenix, Aquarius, and Stellar DEX via the Soroswap aggregator API |
+| **Lend / Borrow** | Complete | Supply collateral, borrow assets, withdraw, repay, and monitor health factor via Blend Protocol |
+| **Earn** | In progress | Browse yield strategies backed by Blend lending pools |
+| **Dashboard** | Complete | Aggregate portfolio view — wallet balances, positions, net APY |
 
 ---
 
@@ -21,8 +23,8 @@ A unified DeFi interface built on the **Stellar blockchain** and **Soroban smart
 
 | Integration | Package | Purpose |
 |-------------|---------|---------|
-| **Stellar Wallets Kit** | `@creit.tech/stellar-wallets-kit@^1.3.0` | Wallet abstraction layer supporting Freighter and other Stellar wallets |
-| **Freighter API** | `@stellar/freighter-api@^6.0.1` | Direct Freighter browser extension connector |
+| **Stellar Wallets Kit** | `@creit.tech/stellar-wallets-kit` | Wallet abstraction layer supporting Freighter and other Stellar wallets |
+| **Freighter API** | `@stellar/freighter-api` | Direct Freighter browser extension connector |
 
 Wallet state (address, wallet type) is persisted in `localStorage` and managed via a React Context (`WalletContext`).
 
@@ -30,32 +32,32 @@ Wallet state (address, wallet type) is persisted in `localStorage` and managed v
 
 ### Stellar Network
 
-| Integration | Package / URL | Purpose |
-|-------------|--------------|---------|
-| **Stellar SDK** | `@stellar/stellar-sdk@^13.3.0` | Core SDK for transaction building, account management, and Soroban contract calls |
-| **Soroban RPC** | `https://soroban.stellar.org` (mainnet) / `https://soroban-testnet.stellar.org` (testnet) | Simulate, assemble, submit, and poll Soroban transactions |
-| **Horizon API** | `https://horizon.stellar.org` (mainnet) / `https://horizon-testnet.stellar.org` (testnet) | Fetch account balances and classic Stellar operations |
+| Integration | URL | Purpose |
+|-------------|-----|---------|
+| **Soroban RPC** | `https://soroban.stellar.org` | Simulate, assemble, submit, and poll Soroban transactions |
+| **Horizon API** | `https://horizon.stellar.org` | Fetch account balances and classic Stellar operations |
 
 ---
 
 ### DeFi Protocols
 
-| Protocol | Contract Address | Integration File | Purpose |
-|----------|-----------------|-----------------|---------|
-| **Blend Protocol** | `CDVQVKOY2YSXS2IC7KN6MNASSHPAO7UN2UR2ON4OI2SKMFJNVAMDX6DP` | `src/lib/blend.ts` | Lending and borrowing — supply, borrow, withdraw, repay |
-| **Soroswap** | Router: `CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH` | `src/lib/soroswap.ts` | DEX swap routing and quote aggregation |
-| **Aquarius AMM** | Router: `CBQDHNBFBZYE4MKPWBSJOPIYLW4SFSXAXUTSXJN76GNKYVYPCKWC6QUK` | via aggregator | Token swaps via Aquarius liquidity pools |
-| **Phoenix** | via aggregator | via aggregator | Token swaps via Phoenix DEX |
-| **DeFindex** | Factory: `CDKFHFJIET3A73A2YN4KV7NSV32S6YGQMUFH3DNJXLBWL4SKEGVRNFKI` | `src/lib/defindex.ts` | Yield vaults (integration in progress) |
-| **Reflector Oracle** | `CAFJZQWSED6YAWZU3GWRTOCNPPCGBN32L7QV43XX5LZLFTK6JLN34DLN` | `src/lib/contracts.ts` | On-chain price feeds for collateral valuation |
+| Protocol | Contract Address | Purpose |
+|----------|-----------------|---------|
+| **Blend Protocol** | `CDVQVKOY2YSXS2IC7KN6MNASSHPAO7UN2UR2ON4OI2SKMFJNVAMDX6DP` | Lending and borrowing — supply, borrow, withdraw, repay |
+| **Soroswap aggregator** | `api.soroswap.finance` | DEX swap routing — quotes and transaction building |
+| **Phoenix** | via Soroswap aggregator | Token swaps via Phoenix DEX |
+| **Aquarius** | via Soroswap aggregator | Token swaps via Aquarius AMM |
+| **Stellar DEX** | via Soroswap aggregator | Token swaps via the native Stellar DEX (SDEX) |
 
 ---
 
-### External Data APIs
+### External APIs
 
 | API | URL | Purpose |
 |-----|-----|---------|
-| **DefiLlama** | `https://api.llama.fi/protocol/blend` | Fetches Blend Protocol TVL and borrowed volume for market data |
+| **Soroswap Quote API** | `https://api.soroswap.finance/quote?network=mainnet` | Get best-route swap quote across all DEXs |
+| **Soroswap Build API** | `https://api.soroswap.finance/quote/build?network=mainnet` | Build unsigned swap transaction XDR |
+| **DefiLlama** | `https://api.llama.fi/protocol/blend` | Blend Protocol TVL and borrow volume for market data |
 
 ---
 
@@ -63,10 +65,13 @@ Wallet state (address, wallet type) is persisted in `localStorage` and managed v
 
 | Token | Contract Address |
 |-------|-----------------|
-| XLM | native |
+| XLM | `native` |
 | USDC | `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75` |
 | EURC | `CDTKPWPLOURQA2SGTKTUQOWRCBZEORB4BWBOMJ3D3ZTQQSGE5F6JBQLV` |
 | yUSDC | `CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YBVMCMTYF3DQLVVQ6M5P7` |
+| AQUA | `GBNZILSTVQZ4R7IKQDGHYGY2QXL5QOFJYQMXPKWRRM5PAV7Y4M67AQUA` |
+| BTC | `CDMLFMKMMD7MWZP3FKUBZPVHTUEDLSX4BYGYKH4GCESXYHS3IHQ4EIG4` |
+| ETH | `CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA` |
 
 ---
 
@@ -74,13 +79,14 @@ Wallet state (address, wallet type) is persisted in `localStorage` and managed v
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 14 (App Router, static export) |
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS 3 |
-| State Management | React Context API + custom hooks |
+| State | React Context API |
 | Blockchain SDK | `@stellar/stellar-sdk` |
 | Wallet Layer | `@creit.tech/stellar-wallets-kit` |
-| Build | Static export (`next export`) |
+| Deployment | GitHub Actions → GitHub Pages |
+| Testing | Vitest |
 
 ---
 
@@ -88,70 +94,83 @@ Wallet state (address, wallet type) is persisted in `localStorage` and managed v
 
 ```
 stellar-defi-app/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml          # GitHub Actions: build + deploy to Pages
 ├── src/
 │   ├── app/
 │   │   ├── page.tsx            # Landing page
 │   │   ├── layout.tsx          # Root layout (WalletProvider)
 │   │   ├── dashboard/          # Portfolio overview
-│   │   ├── swap/               # Token swap interface
-│   │   ├── lend/               # Lending & borrowing UI
+│   │   ├── swap/               # Token swap (Soroswap aggregator)
+│   │   ├── lend/               # Lending & borrowing (Blend Protocol)
 │   │   ├── earn/               # Yield strategies
 │   │   └── docs/               # Developer reference
 │   ├── components/
-│   │   ├── AppLayout.tsx       # Main layout shell
-│   │   ├── ConnectButton.tsx   # Wallet connect/disconnect
-│   │   ├── Header.tsx          # Top navigation
-│   │   ├── Sidebar.tsx         # Side navigation
-│   │   ├── PositionCard.tsx    # DeFi position card
-│   │   ├── TransactionModal.tsx
-│   │   └── TransactionHistory.tsx
+│   │   ├── AppLayout.tsx
+│   │   ├── ConnectButton.tsx
+│   │   ├── Header.tsx
+│   │   └── Sidebar.tsx
 │   ├── contexts/
 │   │   └── WalletContext.tsx   # Global wallet state
-│   └── lib/
-│       ├── stellar.ts          # Network config, RPC & Horizon setup
-│       ├── contracts.ts        # Generic Soroban contract helpers
-│       ├── soroswap.ts         # Soroswap SDK wrapper & quote logic
-│       ├── blend.ts            # Blend Protocol adapter
-│       ├── defindex.ts         # DeFindex vault adapter (WIP)
-│       └── hooks/
-│           └── useContracts.ts # React hook for all contract interactions
-├── .env.example
-├── next.config.mjs
-└── tailwind.config.ts
+│   ├── lib/
+│   │   ├── stellar.ts          # Network config, RPC & Horizon clients
+│   │   ├── soroswap.ts         # Soroswap aggregator API integration
+│   │   ├── blend.ts            # Blend Protocol transaction builders
+│   │   └── contracts.ts        # Generic contract helpers
+│   └── __tests__/
+│       ├── soroswap.test.ts    # Unit tests: utilities + Soroswap API
+│       ├── swapFlow.test.ts    # Integration tests: quote→build pipeline
+│       ├── dexAggregation.test.ts  # DEX routing, slippage, edge cases
+│       └── blend.test.ts       # Blend utilities + pool data
+├── .env.production             # NEXT_PUBLIC_STELLAR_NETWORK=mainnet
+├── next.config.mjs             # Static export, basePath for GitHub Pages
+└── vitest.config.ts
 ```
 
 ---
 
 ## How It Works
 
-### Transaction Flow (Soroban)
-
-Every on-chain action follows this standard flow:
+### Swap Flow
 
 ```
-1. Build transaction   →  TransactionBuilder + contract.call()
-2. Simulate            →  rpc.simulateTransaction()  (estimate resources/fees)
-3. Assemble            →  rpc.assembleTransaction()  (attach resource data)
-4. Sign                →  wallet.signTransaction(xdr)
-5. Submit              →  rpc.sendTransaction()
-6. Poll                →  rpc.getTransaction(hash) until confirmed
+1. getSwapQuote(tokenIn, tokenOut, amount)
+       → POST api.soroswap.finance/quote   (all 4 DEXs, EXACT_IN)
+       → returns quote with amountOut, priceImpact, route, rawData
+
+2. buildSwapTransaction(quote, walletAddress)
+       → POST api.soroswap.finance/quote/build
+       → returns unsigned XDR
+
+3. signTransaction(xdr)          via Freighter (WalletContext)
+       → returns signed XDR
+
+4. submitTransaction(signedXdr)  via Soroban RPC
+       → polls until confirmed, returns status
 ```
 
-### Lending Operations (Blend Protocol)
+### Lending Flow (Blend Protocol)
 
-| Action | Blend RequestType |
-|--------|-----------------|
+```
+1. buildSupplyTransaction / buildBorrowTransaction
+   buildWithdrawTransaction / buildRepayTransaction
+       → Build Soroban contract call XDR
+       → Simulate + assemble with resource data
+
+2. signTransaction(xdr)          via Freighter
+
+3. submitBlendTransaction(xdr)   via Soroban RPC
+```
+
+### Blend RequestTypes
+
+| Action | RequestType |
+|--------|-------------|
 | Supply collateral | `0` |
 | Withdraw collateral | `1` |
 | Borrow | `4` |
 | Repay | `5` |
-
-### Swap Routing
-
-1. `getSwapQuote(tokenIn, tokenOut, amountIn)` — queries the Soroswap aggregator API
-2. Quote returns expected output, price impact %, and route (which DEXs are used)
-3. `buildSwapTransaction()` — creates the Soroban XDR for the swap
-4. Transaction is signed and submitted via the user's connected wallet
 
 ---
 
@@ -159,50 +178,31 @@ Every on-chain action follows this standard flow:
 
 ### Prerequisites
 
-- Node.js 18+
-- A Stellar-compatible wallet browser extension (e.g., [Freighter](https://www.freighter.app/))
+- Node.js 20+
+- [Freighter](https://www.freighter.app/) wallet browser extension (set to **Mainnet**)
 
-### Install & Run
+### Local Development
 
 ```bash
 git clone https://github.com/kaankacar/stellar-defi-app
 cd stellar-defi-app
 npm install
-cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Environment Variables
-
-Copy `.env.example` to `.env.local` and fill in the values:
+Open http://localhost:3000. The dev server defaults to testnet unless you set:
 
 ```bash
-# Network: testnet | mainnet
-NEXT_PUBLIC_STELLAR_NETWORK=testnet
-
-# Core Hub Contracts (deploy your own or use existing addresses)
-NEXT_PUBLIC_ROUTER_CONTRACT=
-NEXT_PUBLIC_REGISTRY_CONTRACT=
-NEXT_PUBLIC_AGGREGATOR_CONTRACT=
-NEXT_PUBLIC_ORACLE_CONTRACT=
-
-# Protocol Adapter Contracts
-NEXT_PUBLIC_BLEND_ADAPTER=
-NEXT_PUBLIC_SOROSWAP_ADAPTER=
-NEXT_PUBLIC_AQUARIUS_ADAPTER=
-NEXT_PUBLIC_DEFINDEX_ADAPTER=
-NEXT_PUBLIC_PHOENIX_ADAPTER=
-NEXT_PUBLIC_ORBIT_ADAPTER=
-
-# Strategy Contracts
-NEXT_PUBLIC_YIELD_STRATEGY=
-NEXT_PUBLIC_LEVERAGE_STRATEGY=
-NEXT_PUBLIC_LPZAP_STRATEGY=
+NEXT_PUBLIC_STELLAR_NETWORK=mainnet npm run dev
 ```
 
-### Network Endpoints (pre-configured)
+### Production Build
+
+```bash
+npm run build        # outputs to ./out (uses .env.production → mainnet)
+```
+
+### Network Config
 
 | Network | Soroban RPC | Horizon |
 |---------|------------|---------|
@@ -210,26 +210,44 @@ NEXT_PUBLIC_LPZAP_STRATEGY=
 | Testnet | `https://soroban-testnet.stellar.org` | `https://horizon-testnet.stellar.org` |
 | Local | `http://localhost:8000/soroban/rpc` | `http://localhost:8000` |
 
+Set via `NEXT_PUBLIC_STELLAR_NETWORK=mainnet|testnet|local`.
+
 ---
 
-## Current Status
+## Deployment
 
-| Feature | Status |
-|---------|--------|
-| Wallet connection (Freighter + others) | Complete |
-| Portfolio dashboard | Complete |
-| Blend lending / borrowing | Complete |
-| Swap quote fetching (Soroswap) | Complete |
-| Swap transaction execution | In progress |
-| DeFindex yield vaults | In progress |
-| Orbit Protocol adapter | Planned |
-| Phoenix Protocol adapter | Planned |
+The app is automatically deployed to GitHub Pages on every push to `main`.
+
+**One-time setup** (already done):
+1. In repo settings: **Settings → Pages → Source → GitHub Actions**
+2. The workflow (`.github/workflows/deploy.yml`) handles everything else
+
+The workflow:
+- Builds with `NEXT_PUBLIC_STELLAR_NETWORK=mainnet`
+- Uploads `./out` as a GitHub Pages artifact
+- Deploys to https://kaankacar.github.io/stellar-defi-app/
+
+---
+
+## Testing
+
+```bash
+npm test           # run all tests once
+npm run test:watch # watch mode
+```
+
+43+ tests covering:
+- `formatAmount` / `parseAmount` round-trips
+- `getSwapQuote`: correct endpoint, request body (assetIn/assetOut, EXACT_IN, 4 protocols), response mapping, error paths
+- `buildSwapTransaction`: passes raw quote data to build endpoint, returns XDR, error paths
+- DEX aggregation: multi-hop routing, slippage bps, price impact classification, edge cases
+- `getPoolData`: DefiLlama fallback, market shape validation, empty-state handling
 
 ---
 
 ## Contributing
 
-Pull requests are welcome. For larger changes please open an issue first to discuss your proposed approach.
+Pull requests are welcome. For larger changes please open an issue first.
 
 ## License
 
