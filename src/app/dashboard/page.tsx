@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { AppLayout } from "@/components/AppLayout";
 import { useWallet } from "@/contexts/WalletContext";
 import { getUserPositions, type UserPositionSummary } from "@/lib/blend";
 import { horizon } from "@/lib/stellar";
+import { getTokenPrices } from "@/lib/reflector";
 
 interface AccountBalance {
   asset: string;
@@ -16,6 +18,7 @@ export default function DashboardPage() {
   const { address, connected } = useWallet();
   const [blendPosition, setBlendPosition] = useState<UserPositionSummary | null>(null);
   const [balances, setBalances] = useState<AccountBalance[]>([]);
+  const [prices, setPrices] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,10 +33,15 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      // Load account balances from Horizon
-      try {
-        const account = await horizon.loadAccount(address);
-        const accountBalances: AccountBalance[] = account.balances.map((b) => {
+      // Load account balances, Blend positions, and token prices in parallel
+      const [balancesResult, blendResult, pricesResult] = await Promise.allSettled([
+        horizon.loadAccount(address),
+        getUserPositions(address),
+        getTokenPrices(),
+      ]);
+
+      if (balancesResult.status === 'fulfilled') {
+        const accountBalances: AccountBalance[] = balancesResult.value.balances.map((b) => {
           if (b.asset_type === "native") {
             return { asset: "XLM", balance: b.balance };
           }
@@ -44,16 +52,20 @@ export default function DashboardPage() {
           };
         });
         setBalances(accountBalances);
-      } catch (err) {
-        console.warn("Failed to load account balances:", err);
+      } else {
+        console.warn("Failed to load account balances:", balancesResult.reason);
       }
 
-      // Load Blend positions
-      try {
-        const positions = await getUserPositions(address);
-        setBlendPosition(positions);
-      } catch (err) {
-        console.warn("Failed to load Blend positions:", err);
+      if (blendResult.status === 'fulfilled') {
+        setBlendPosition(blendResult.value);
+      } else {
+        console.warn("Failed to load Blend positions:", blendResult.reason);
+      }
+
+      if (pricesResult.status === 'fulfilled') {
+        setPrices(pricesResult.value);
+      } else {
+        console.warn("Failed to load token prices:", pricesResult.reason);
       }
     } catch (err) {
       console.error("Failed to load user data:", err);
@@ -70,7 +82,11 @@ export default function DashboardPage() {
   // Calculate totals
   const totalSupplied = blendPosition?.totalCollateralValue || 0;
   const totalBorrowed = blendPosition?.totalBorrowedValue || 0;
-  const totalValue = totalSupplied - totalBorrowed;
+  const walletUsdValue = balances.reduce((sum, b) => {
+    const price = prices[b.asset] ?? 0;
+    return sum + parseFloat(b.balance) * price;
+  }, 0);
+  const totalValue = walletUsdValue + totalSupplied - totalBorrowed;
   const netAPY = blendPosition?.netAPR || 0;
 
   if (!connected) {
@@ -155,17 +171,26 @@ export default function DashboardPage() {
             </div>
           ) : balances.length > 0 ? (
             <div className="space-y-3">
-              {balances.map((balance, idx) => (
-                <div
-                  key={idx}
-                  className="flex justify-between items-center p-3 bg-gray-800 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">{balance.asset}</span>
+              {balances.map((balance, idx) => {
+                const price = prices[balance.asset] ?? 0;
+                const usdValue = parseFloat(balance.balance) * price;
+                return (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center p-3 bg-gray-800 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">{balance.asset}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono block">{parseFloat(balance.balance).toFixed(4)}</span>
+                      {price > 0 && (
+                        <span className="text-xs text-gray-400">${usdValue.toFixed(2)}</span>
+                      )}
+                    </div>
                   </div>
-                  <span className="font-mono">{parseFloat(balance.balance).toFixed(4)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-6 text-gray-500">
@@ -324,13 +349,13 @@ function QuickAction({
   href: string;
 }) {
   return (
-    <a
+    <Link
       href={href}
       className="flex flex-col items-center p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
     >
       <span className="font-medium">{title}</span>
       <span className="text-xs text-gray-400 mt-1">{description}</span>
-    </a>
+    </Link>
   );
 }
 

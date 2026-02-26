@@ -29,7 +29,6 @@ export default function EarnPage() {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [userPositions, setUserPositions] = useState<VaultPosition[]>([]);
   const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
-  const [filter, setFilter] = useState<"all" | "low" | "medium" | "high">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,10 +110,6 @@ export default function EarnPage() {
   }, [loadStrategies]);
 
 
-  const filteredStrategies = strategies.filter(
-    (s) => filter === "all" || s.risk.toLowerCase() === filter
-  );
-
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -174,35 +169,18 @@ export default function EarnPage() {
           </div>
         )}
 
-        {/* Risk Filter */}
-        <div className="flex gap-2">
-          {(["all", "low", "medium", "high"] as const).map((risk) => (
-            <button
-              key={risk}
-              onClick={() => setFilter(risk)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === risk
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:text-white"
-              }`}
-            >
-              {risk === "all" ? "All" : `${risk.charAt(0).toUpperCase() + risk.slice(1)} Risk`}
-            </button>
-          ))}
-        </div>
-
         {/* Strategy Cards */}
         {loading ? (
           <div className="text-center py-12 text-gray-500">
             <span className="animate-pulse">Loading yield strategies from protocols...</span>
           </div>
-        ) : filteredStrategies.length === 0 ? (
+        ) : strategies.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            No strategies available for this filter
+            No strategies available
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredStrategies.map((strategy) => (
+            {strategies.map((strategy) => (
               <div
                 key={strategy.id}
                 className="bg-gray-900 rounded-xl p-6 border border-gray-800 hover:border-gray-700 transition-colors"

@@ -30,10 +30,16 @@ export default function SwapPage() {
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [txStatus, setTxStatus] = useState<string | null>(null);
+  const [selectedProtocols, setSelectedProtocols] = useState(['soroswap', 'phoenix', 'aqua', 'sdex']);
 
   // Debounced quote fetching
   const fetchQuote = useCallback(async () => {
     if (!fromAmount || parseFloat(fromAmount) <= 0) {
+      setQuote(null);
+      return;
+    }
+
+    if (selectedProtocols.length === 0) {
       setQuote(null);
       return;
     }
@@ -48,7 +54,9 @@ export default function SwapPage() {
       const quoteResult = await getSwapQuote(
         fromToken.address,
         toToken.address,
-        amountIn
+        amountIn,
+        50,
+        selectedProtocols
       );
       setQuote(quoteResult);
     } catch (err) {
@@ -58,7 +66,7 @@ export default function SwapPage() {
     } finally {
       setQuoteLoading(false);
     }
-  }, [fromAmount, fromToken, toToken]);
+  }, [fromAmount, fromToken, toToken, selectedProtocols]);
 
   // Fetch quote when inputs change
   useEffect(() => {
@@ -224,19 +232,55 @@ export default function SwapPage() {
           {/* Swap Button */}
           <button
             onClick={handleSwap}
-            disabled={!connected || !fromAmount || !quote || loading}
+            disabled={!connected || !fromAmount || !quote || loading || selectedProtocols.length === 0}
             className="w-full mt-4 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
           >
             {loading
               ? "Processing..."
               : !connected
               ? "Connect Wallet"
+              : selectedProtocols.length === 0
+              ? "Select a Protocol"
               : !fromAmount
               ? "Enter Amount"
               : !quote
               ? "Getting Quote..."
               : "Swap"}
           </button>
+        </div>
+
+        {/* Protocol Selector */}
+        <div className="mt-4 bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <p className="text-sm text-gray-400 mb-3">Protocols</p>
+          <div className="flex flex-wrap gap-2">
+            {(['soroswap', 'phoenix', 'aqua', 'sdex'] as const).map((protocol) => {
+              const labels: Record<string, string> = {
+                soroswap: 'Soroswap',
+                phoenix: 'Phoenix',
+                aqua: 'Aquarius',
+                sdex: 'SDEX',
+              };
+              const active = selectedProtocols.includes(protocol);
+              return (
+                <button
+                  key={protocol}
+                  onClick={() => {
+                    setSelectedProtocols((prev) =>
+                      active ? prev.filter((p) => p !== protocol) : [...prev, protocol]
+                    );
+                    setQuote(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                    active
+                      ? 'bg-blue-600 border-blue-500 text-white'
+                      : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {active ? '✓ ' : ''}{labels[protocol]}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Info Box */}

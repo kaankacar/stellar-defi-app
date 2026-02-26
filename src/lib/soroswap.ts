@@ -41,7 +41,8 @@ export async function getSwapQuote(
   tokenIn: string,
   tokenOut: string,
   amountIn: string,
-  slippageBps: number = 50
+  slippageBps: number = 50,
+  protocols: string[] = ['soroswap', 'phoenix', 'aqua', 'sdex']
 ): Promise<SwapQuote> {
   try {
     const response = await fetch('https://api.soroswap.finance/quote?network=mainnet', {
@@ -55,7 +56,7 @@ export async function getSwapQuote(
         assetOut: resolveTokenForApi(tokenOut),
         amount: Number(amountIn),
         tradeType: 'EXACT_IN',
-        protocols: ['soroswap', 'phoenix', 'aqua', 'sdex'],
+        protocols,
         parts: 10,
         slippageBps,
       }),

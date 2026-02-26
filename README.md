@@ -1,6 +1,6 @@
 # Stellar DeFi Super App
 
-A unified DeFi interface built on the **Stellar blockchain** and **Soroban smart contracts**, deployed as a fully static site on **GitHub Pages**. The app aggregates multiple DeFi protocols into a single dashboard — swap tokens, lend/borrow assets, and track your positions, all from one place.
+A unified DeFi interface built on the **Stellar blockchain** and **Soroban smart contracts**, deployed as a fully static site on **GitHub Pages**. The app aggregates multiple DeFi protocols into a single dashboard — swap tokens, lend/borrow assets, and track your positions with live USD prices, all from one place.
 
 **Live:** https://kaankacar.github.io/stellar-defi-app/
 
@@ -10,10 +10,10 @@ A unified DeFi interface built on the **Stellar blockchain** and **Soroban smart
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| **Swap** | Complete | Route token swaps across Soroswap, Phoenix, Aquarius, and Stellar DEX via the Soroswap aggregator API |
+| **Swap** | Complete | Route token swaps across Soroswap, Phoenix, Aquarius, and Stellar DEX; protocol selector lets you choose which DEXs to include |
 | **Lend / Borrow** | Complete | Supply collateral, borrow assets, withdraw, repay, and monitor health factor via Blend Protocol |
-| **Earn** | Complete | Browse yield strategies backed by Blend lending pools, with risk filter and APY display |
-| **Dashboard** | Complete | Aggregate portfolio view — wallet balances, positions, net APY |
+| **Earn** | Complete | Browse yield strategies backed by Blend lending pools with live on-chain APY and TVL |
+| **Dashboard** | Complete | Aggregate portfolio view — wallet balances with live USD prices, Blend positions, net portfolio value |
 
 ---
 
@@ -34,20 +34,21 @@ Wallet state (address, wallet type) is persisted in `localStorage` and managed v
 
 | Integration | URL | Purpose |
 |-------------|-----|---------|
-| **Soroban RPC** | `https://soroban.stellar.org` | Simulate, assemble, submit, and poll Soroban transactions |
+| **Soroban RPC** | `https://rpc.ankr.com/stellar_soroban` | Simulate, assemble, submit, and poll Soroban transactions |
 | **Horizon API** | `https://horizon.stellar.org` | Fetch account balances and classic Stellar operations |
 
 ---
 
 ### DeFi Protocols
 
-| Protocol | Contract Address | Purpose |
-|----------|-----------------|---------|
+| Protocol | Contract / Endpoint | Purpose |
+|----------|---------------------|---------|
 | **Blend Protocol v1** | `CDVQVKOY2YSXS2IC7KN6MNASSHPAO7UN2UR2ON4OI2SKMFJNVAMDX6DP` | Lending and borrowing — supply, borrow, withdraw, repay |
 | **Soroswap aggregator** | `api.soroswap.finance` | DEX swap routing — quotes and transaction building |
 | **Phoenix** | via Soroswap aggregator | Token swaps via Phoenix DEX |
 | **Aquarius** | via Soroswap aggregator | Token swaps via Aquarius AMM |
 | **Stellar DEX** | via Soroswap aggregator | Token swaps via the native Stellar DEX (SDEX) |
+| **Reflector Oracle** | `CAFJZQWSED6YAWZU3GWRTOCNPPCGBN32L7QV43XX5LZLFTK6JLN34DLN` | On-chain USD price feed for XLM and other assets |
 
 All contract addresses verified on-chain via Stellar Expert.
 
@@ -57,7 +58,7 @@ All contract addresses verified on-chain via Stellar Expert.
 
 | API | URL | Purpose |
 |-----|-----|---------|
-| **Soroswap Quote API** | `https://api.soroswap.finance/quote?network=mainnet` | Get best-route swap quote across all DEXs |
+| **Soroswap Quote API** | `https://api.soroswap.finance/quote?network=mainnet` | Get best-route swap quote across selected DEXs |
 | **Soroswap Build API** | `https://api.soroswap.finance/quote/build?network=mainnet` | Build unsigned swap transaction XDR |
 | **DefiLlama** | `https://api.llama.fi/protocol/blend` | Blend Protocol TVL and borrow volume for market data |
 
@@ -67,13 +68,12 @@ All contract addresses verified on-chain via Stellar Expert.
 
 | Token | Contract Address |
 |-------|-----------------|
-| XLM | `native` |
+| XLM | `native` (SAC: `CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA`) |
 | USDC | `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75` |
 | EURC | `CDTKPWPLOURQA2SGTKTUQOWRCBZEORB4BWBOMJ3D3ZTQQSGE5F6JBQLV` |
 | yUSDC | `CDOFW7HNKLUZRLFZST4EW7V3AV4JI5IHMT6BPXXSY2IEFZ4NE5TWU2P4` |
 | AQUA | `CAUIKL3IYGMERDRUN6YSCLWVAKIFG5Q4YJHUKM4S4NJZQIA3BAS6OJPK` |
 | BTC | `CAO7DDJNGMOYQPRYDY5JVZ5YEK4UQBSMGLAEWRCUOTRMDSBMGWSAATDZ` |
-| ETH | `CBH4M45TQBLDPXOK6L7VYKMEJWFITBOL64BN3WDAIIDT4LNUTWTTOCKF` |
 
 ---
 
@@ -88,7 +88,7 @@ All contract addresses verified on-chain via Stellar Expert.
 | Blockchain SDK | `@stellar/stellar-sdk` |
 | Wallet Layer | `@creit.tech/stellar-wallets-kit` |
 | Deployment | GitHub Actions → GitHub Pages |
-| Testing | Vitest |
+| Testing | Vitest (79 tests) |
 
 ---
 
@@ -103,10 +103,10 @@ stellar-defi-app/
 │   ├── app/
 │   │   ├── page.tsx            # Landing page
 │   │   ├── layout.tsx          # Root layout (WalletProvider)
-│   │   ├── dashboard/          # Portfolio overview
-│   │   ├── swap/               # Token swap (Soroswap aggregator)
+│   │   ├── dashboard/          # Portfolio overview with live USD prices
+│   │   ├── swap/               # Token swap with protocol selector
 │   │   ├── lend/               # Lending & borrowing (Blend Protocol)
-│   │   ├── earn/               # Yield strategies
+│   │   ├── earn/               # Yield strategies (Blend pools)
 │   │   └── docs/               # Developer reference
 │   ├── components/
 │   │   ├── AppLayout.tsx
@@ -119,6 +119,7 @@ stellar-defi-app/
 │   │   ├── stellar.ts          # Network config, RPC & Horizon clients
 │   │   ├── soroswap.ts         # Soroswap aggregator API integration
 │   │   ├── blend.ts            # Blend Protocol transaction builders
+│   │   ├── reflector.ts        # Reflector oracle: live USD price queries
 │   │   └── contracts.ts        # Generic contract helpers
 │   └── __tests__/
 │       ├── soroswap.test.ts    # Unit tests: utilities + Soroswap API
@@ -137,8 +138,8 @@ stellar-defi-app/
 ### Swap Flow
 
 ```
-1. getSwapQuote(tokenIn, tokenOut, amount)
-       → POST api.soroswap.finance/quote   (all 4 DEXs, EXACT_IN)
+1. getSwapQuote(tokenIn, tokenOut, amount, slippageBps, protocols)
+       → POST api.soroswap.finance/quote   (selected DEXs, EXACT_IN)
        → returns quote with amountOut, priceImpact, route, rawData
 
 2. buildSwapTransaction(quote, walletAddress)
@@ -174,6 +175,10 @@ stellar-defi-app/
 | Borrow | `4` |
 | Repay | `5` |
 
+### USD Prices (Reflector Oracle)
+
+The dashboard fetches live USD prices from the Reflector oracle via Soroban RPC simulation (read-only, no transaction needed). XLM price is queried using `Asset::Other("XLM")`, with 14 decimal places of precision. Stablecoins (USDC, EURC, yUSDC) are treated as $1.00.
+
 ---
 
 ## Getting Started
@@ -208,7 +213,7 @@ npm run build        # outputs to ./out (uses .env.production → mainnet)
 
 | Network | Soroban RPC | Horizon |
 |---------|------------|---------|
-| Mainnet | `https://soroban.stellar.org` | `https://horizon.stellar.org` |
+| Mainnet | `https://rpc.ankr.com/stellar_soroban` | `https://horizon.stellar.org` |
 | Testnet | `https://soroban-testnet.stellar.org` | `https://horizon-testnet.stellar.org` |
 | Local | `http://localhost:8000/soroban/rpc` | `http://localhost:8000` |
 
@@ -234,13 +239,14 @@ The workflow:
 ## Testing
 
 ```bash
-npm test           # run all tests once
-npm run test:watch # watch mode
+npm test                  # run all 79 unit tests
+npm run test:watch        # watch mode
+npm run test:integration  # real network tests (requires .env.production)
 ```
 
-69 tests across 4 files covering:
+79 unit tests across 4 files covering:
 - `formatAmount` / `parseAmount` round-trips (blend + soroswap)
-- `getSwapQuote`: correct endpoint, request body (`assetIn`/`assetOut`, `EXACT_IN`, 4 protocols), response mapping, error paths
+- `getSwapQuote`: correct endpoint, request body (including `protocols` array), response mapping, error paths
 - `buildSwapTransaction`: passes raw quote data to build endpoint, returns XDR, handles HTTP errors (429, 503)
 - DEX aggregation: single/multi/3-hop routes, slippage bps, price impact classification, amount encoding
 - Quote → build pipeline: `rawData` is preserved end-to-end
