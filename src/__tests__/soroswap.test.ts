@@ -5,6 +5,7 @@ import {
   getSwapQuote,
   buildSwapTransaction,
   MAINNET_TOKENS,
+  XLM_SAC,
   type SwapQuote,
 } from '../lib/soroswap';
 
@@ -70,7 +71,7 @@ describe('parseAmount', () => {
 // ─── MAINNET_TOKENS ──────────────────────────────────────────────────────────
 
 describe('MAINNET_TOKENS', () => {
-  it('has correct XLM address', () => {
+  it('has XLM as "native" (Stellar SDK canonical form)', () => {
     expect(MAINNET_TOKENS.XLM).toBe('native');
   });
 
@@ -83,11 +84,72 @@ describe('MAINNET_TOKENS', () => {
   });
 });
 
+describe('XLM_SAC', () => {
+  it('is a valid Stellar contract address', () => {
+    expect(XLM_SAC).toMatch(/^C[A-Z0-9]{55}$/);
+  });
+
+  it('is different from "native"', () => {
+    expect(XLM_SAC).not.toBe('native');
+  });
+});
+
 // ─── getSwapQuote ─────────────────────────────────────────────────────────────
 
 describe('getSwapQuote', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('maps "native" XLM to the XLM SAC address in the request body', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ amountIn: '10000000', amountOut: '9800000', priceImpact: '0.12', routePlan: [] }),
+    } as Response);
+
+    await getSwapQuote('native', MAINNET_TOKENS.USDC, '10000000');
+
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.assetIn).toBe(XLM_SAC);
+    expect(body.assetIn).not.toBe('native');
+  });
+
+  it('passes non-native token addresses unchanged', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ amountOut: '9800000', routePlan: [] }),
+    } as Response);
+
+    await getSwapQuote(MAINNET_TOKENS.USDC, MAINNET_TOKENS.EURC, '10000000');
+
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.assetIn).toBe(MAINNET_TOKENS.USDC);
+    expect(body.assetOut).toBe(MAINNET_TOKENS.EURC);
+  });
+
+  it('sends amount as a number (not string)', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ amountOut: '9800000', routePlan: [] }),
+    } as Response);
+
+    await getSwapQuote('native', MAINNET_TOKENS.USDC, '10000000');
+
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.amount).toBe(10000000);
+    expect(typeof body.amount).toBe('number');
+  });
+
+  it('includes parts: 10 for multi-route aggregation', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ amountOut: '9800000', routePlan: [] }),
+    } as Response);
+
+    await getSwapQuote('native', MAINNET_TOKENS.USDC, '10000000');
+
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.parts).toBe(10);
   });
 
   it('calls the Soroswap quote endpoint with correct body', async () => {
@@ -96,7 +158,7 @@ describe('getSwapQuote', () => {
       amountOut: '9800000',
       priceImpact: '0.12',
       routePlan: [
-        { swapInfo: { path: ['native', MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
+        { swapInfo: { path: [XLM_SAC, MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
       ],
     };
 
@@ -107,20 +169,25 @@ describe('getSwapQuote', () => {
 
     await getSwapQuote('native', MAINNET_TOKENS.USDC, '10000000');
 
-    expect(fetch).toHaveBeenCalledWith(
-      'https://api.soroswap.finance/quote?network=mainnet',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"assetIn":"native"'),
-      })
-    );
+    const [url, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe('https://api.soroswap.finance/quote?network=mainnet');
+    expect(options.method).toBe('POST');
+    const body = JSON.parse(options.body);
+    expect(body.tradeType).toBe('EXACT_IN');
+    expect(body.protocols).toContain('soroswap');
+    expect(body.protocols).toContain('sdex');
+  });
 
-    const callBody = JSON.parse(
-      (fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
-    );
-    expect(callBody.tradeType).toBe('EXACT_IN');
-    expect(callBody.protocols).toContain('soroswap');
-    expect(callBody.protocols).toContain('sdex');
+  it('includes Authorization header', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ amountOut: '9800000', routePlan: [] }),
+    } as Response);
+
+    await getSwapQuote('native', MAINNET_TOKENS.USDC, '10000000');
+
+    const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(options.headers['Authorization']).toMatch(/^Bearer /);
   });
 
   it('maps API response to SwapQuote correctly', async () => {
@@ -129,7 +196,7 @@ describe('getSwapQuote', () => {
       amountOut: '9800000',
       priceImpact: '0.12',
       routePlan: [
-        { swapInfo: { path: ['native', MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
+        { swapInfo: { path: [XLM_SAC, MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
       ],
     };
 
@@ -185,7 +252,7 @@ describe('buildSwapTransaction', () => {
     amountIn: '10000000',
     amountOut: '9800000',
     priceImpactPct: '0.12',
-    route: ['native', MAINNET_TOKENS.USDC],
+    route: [XLM_SAC, MAINNET_TOKENS.USDC],
     protocols: ['soroswap'],
     rawData: { some: 'raw', api: 'data' },
   };
@@ -214,6 +281,18 @@ describe('buildSwapTransaction', () => {
     );
     expect(callBody.from).toBe(walletAddress);
     expect(callBody.quote).toEqual(mockQuote.rawData); // passes raw data, not parsed
+  });
+
+  it('includes Authorization header', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ xdr: 'AAAA' }),
+    } as Response);
+
+    await buildSwapTransaction(mockQuote, walletAddress);
+
+    const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(options.headers['Authorization']).toMatch(/^Bearer /);
   });
 
   it('returns the XDR string from the API response', async () => {

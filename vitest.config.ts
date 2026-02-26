@@ -8,5 +8,11 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Default test run excludes integration tests (which hit real network)
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/__tests__/integration.test.ts',
+    ],
   },
 });

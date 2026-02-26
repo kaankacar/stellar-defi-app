@@ -6,7 +6,7 @@
  * without hitting real network endpoints.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getSwapQuote, buildSwapTransaction, MAINNET_TOKENS } from '../lib/soroswap';
+import { getSwapQuote, buildSwapTransaction, MAINNET_TOKENS, XLM_SAC } from '../lib/soroswap';
 
 const WALLET_ADDRESS = 'GABJLI6IVPKFLKSRZQW4ZI3YOLBGZIRW57LLRAFLXQ7KYGCN4JTNNCV';
 
@@ -15,7 +15,7 @@ const MOCK_QUOTE_RESPONSE = {
   amountOut: '9750000',
   priceImpact: '0.25',
   routePlan: [
-    { swapInfo: { path: ['native', MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
+    { swapInfo: { path: [XLM_SAC, MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
     { swapInfo: { path: [MAINNET_TOKENS.USDC, MAINNET_TOKENS.EURC], protocol: 'phoenix' } },
   ],
 };
@@ -41,6 +41,18 @@ describe('swap pipeline', () => {
     expect(quote.priceImpactPct).toBe('0.25');
     expect(quote.protocols).toEqual(['soroswap', 'phoenix']);
     expect(quote.rawData).toBeDefined(); // must be preserved for step 2
+  });
+
+  it('step 1: "native" XLM is resolved to XLM SAC in the request', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => MOCK_QUOTE_RESPONSE,
+    } as Response);
+
+    await getSwapQuote('native', MAINNET_TOKENS.USDC, '10000000');
+
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.assetIn).toBe(XLM_SAC);
   });
 
   it('step 2: buildSwapTransaction sends the raw quote data to the build API', async () => {

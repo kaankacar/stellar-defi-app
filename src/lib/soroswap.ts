@@ -1,12 +1,24 @@
-// Known token addresses on mainnet
+// The Stellar Asset Contract (SAC) address for XLM on mainnet.
+// Soroswap API does not accept "native" — use this SAC address instead.
+export const XLM_SAC = 'CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA';
+
+// Known token addresses on mainnet ("native" is used for Stellar SDK / Horizon)
 export const MAINNET_TOKENS = {
   XLM: 'native',
   USDC: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75',   // Circle USDC SAC
   EURC: 'CDTKPWPLOURQA2SGTKTUQOWRCBZEORB4BWBOMJ3D3ZTQQSGE5F6JBQLV',   // Circle EURC SAC
   yUSDC: 'CDOFW7HNKLUZRLFZST4EW7V3AV4JI5IHMT6BPXXSY2IEFZ4NE5TWU2P4', // yUSDC by Ultra Capital
-  AQUA: 'CAUIKL3IYGMERDRUN6YSCLWVAKIFG5Q4YJHUKM4S4NJZQIA3BAS6OJPK',   // AQUA SAC (aqua.network)
+  AQUA: 'CAUIKL3IYGMERDRUN6YSCLWVAKIFG5Q4YJHUKM4S4NJZQIA3BAS6OJPK',   // AQUA SAC
   BTC: 'CAO7DDJNGMOYQPRYDY5JVZ5YEK4UQBSMGLAEWRCUOTRMDSBMGWSAATDZ',    // BTC by Ultra Capital
 } as const;
+
+// Resolve a token address for Soroswap API calls.
+// "native" is not accepted by the API; map it to the XLM SAC.
+function resolveTokenForApi(token: string): string {
+  return token === 'native' ? XLM_SAC : token;
+}
+
+const SOROSWAP_API_KEY = process.env.NEXT_PUBLIC_SOROSWAP_API_KEY || '';
 
 export interface SwapQuote {
   amountIn: string;
@@ -36,13 +48,15 @@ export async function getSwapQuote(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SOROSWAP_API_KEY}`,
       },
       body: JSON.stringify({
-        assetIn: tokenIn,
-        assetOut: tokenOut,
-        amount: amountIn,
+        assetIn: resolveTokenForApi(tokenIn),
+        assetOut: resolveTokenForApi(tokenOut),
+        amount: Number(amountIn),
         tradeType: 'EXACT_IN',
         protocols: ['soroswap', 'phoenix', 'aqua', 'sdex'],
+        parts: 10,
         slippageBps,
       }),
     });
@@ -55,8 +69,8 @@ export async function getSwapQuote(
     const data = await response.json();
 
     return {
-      amountIn: data.amountIn || amountIn,
-      amountOut: data.amountOut || '0',
+      amountIn: data.amountIn?.toString() || amountIn,
+      amountOut: data.amountOut?.toString() || '0',
       priceImpactPct: data.priceImpact || data.priceImpactPct || '0',
       route: data.routePlan?.flatMap((plan: { swapInfo: { path: string[] } }) => plan.swapInfo.path) || [],
       protocols: data.routePlan?.map((plan: { swapInfo: { protocol: string } }) => plan.swapInfo.protocol) || [],
@@ -79,6 +93,7 @@ export async function buildSwapTransaction(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SOROSWAP_API_KEY}`,
       },
       body: JSON.stringify({
         quote: quote.rawData,

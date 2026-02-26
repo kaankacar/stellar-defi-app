@@ -14,6 +14,7 @@ import {
   formatAmount,
   parseAmount,
   MAINNET_TOKENS,
+  XLM_SAC,
   type SwapQuote,
 } from '../lib/soroswap';
 
@@ -60,14 +61,14 @@ describe('DEX aggregation — protocol routing', () => {
         amountOut: '9800000',
         priceImpact: '0.1',
         routePlan: [
-          { swapInfo: { path: [MAINNET_TOKENS.XLM, MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
+          { swapInfo: { path: [XLM_SAC, MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
         ],
       }),
     } as Response);
 
     const quote = await getSwapQuote(MAINNET_TOKENS.XLM, MAINNET_TOKENS.USDC, '10000000');
     expect(quote.protocols).toEqual(['soroswap']);
-    expect(quote.route).toContain(MAINNET_TOKENS.XLM);
+    expect(quote.route).toContain(XLM_SAC);
     expect(quote.route).toContain(MAINNET_TOKENS.USDC);
   });
 
@@ -79,7 +80,7 @@ describe('DEX aggregation — protocol routing', () => {
         amountOut: '9600000',
         priceImpact: '0.4',
         routePlan: [
-          { swapInfo: { path: [MAINNET_TOKENS.XLM, MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
+          { swapInfo: { path: [XLM_SAC, MAINNET_TOKENS.USDC], protocol: 'soroswap' } },
           { swapInfo: { path: [MAINNET_TOKENS.USDC, MAINNET_TOKENS.EURC], protocol: 'phoenix' } },
         ],
       }),
@@ -98,7 +99,7 @@ describe('DEX aggregation — protocol routing', () => {
         amountOut: '48000000',
         priceImpact: '1.5',
         routePlan: [
-          { swapInfo: { path: [MAINNET_TOKENS.XLM, MAINNET_TOKENS.USDC], protocol: 'sdex' } },
+          { swapInfo: { path: [XLM_SAC, MAINNET_TOKENS.USDC], protocol: 'sdex' } },
           { swapInfo: { path: [MAINNET_TOKENS.USDC, MAINNET_TOKENS.EURC], protocol: 'aqua' } },
           { swapInfo: { path: [MAINNET_TOKENS.EURC, MAINNET_TOKENS.yUSDC], protocol: 'soroswap' } },
         ],
@@ -219,7 +220,7 @@ describe('DEX aggregation — price impact', () => {
 describe('DEX aggregation — amount encoding', () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  it('sends amount as string in request body', async () => {
+  it('sends amount as a number (integer) in request body', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValueOnce({
       ok: true,
       json: async () => ({ amountOut: '980000', routePlan: [] }),
@@ -228,8 +229,8 @@ describe('DEX aggregation — amount encoding', () => {
     await getSwapQuote(MAINNET_TOKENS.XLM, MAINNET_TOKENS.USDC, '100000000');
 
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
-    expect(body.amount).toBe('100000000');
-    expect(typeof body.amount).toBe('string');
+    expect(body.amount).toBe(100000000);
+    expect(typeof body.amount).toBe('number');
   });
 
   it('correctly encodes 1 XLM (7 decimals = 10_000_000 stroops)', () => {
@@ -305,7 +306,7 @@ describe('buildSwapTransaction — network layer', () => {
       ok: false,
       status: 503,
       json: async () => { throw new Error('not json'); },
-    } as Response);
+    } as unknown as Response);
 
     const quote: SwapQuote = {
       amountIn: '1000000', amountOut: '980000', priceImpactPct: '0.1',
@@ -321,7 +322,7 @@ describe('buildSwapTransaction — network layer', () => {
 describe('getSwapQuote — data fetching robustness', () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  it('sends assetIn and assetOut (not tokenIn/tokenOut)', async () => {
+  it('sends assetIn and assetOut fields (not tokenIn/tokenOut)', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValueOnce({
       ok: true,
       json: async () => ({ amountOut: '980000', routePlan: [] }),
@@ -330,7 +331,8 @@ describe('getSwapQuote — data fetching robustness', () => {
     await getSwapQuote('native', MAINNET_TOKENS.USDC, '1000000');
 
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
-    expect(body.assetIn).toBe('native');
+    // "native" is resolved to XLM SAC for the API
+    expect(body.assetIn).toBe(XLM_SAC);
     expect(body.assetOut).toBe(MAINNET_TOKENS.USDC);
     // old field names must NOT be present
     expect(body.tokenIn).toBeUndefined();

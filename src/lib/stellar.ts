@@ -17,7 +17,7 @@ const configs: Record<NetworkType, NetworkConfig> = {
     friendbotUrl: "https://friendbot.stellar.org",
   },
   mainnet: {
-    rpcUrl: "https://soroban.stellar.org",
+    rpcUrl: "https://rpc.ankr.com/stellar_soroban",
     horizonUrl: "https://horizon.stellar.org",
     networkPassphrase: StellarSdk.Networks.PUBLIC,
     friendbotUrl: null,

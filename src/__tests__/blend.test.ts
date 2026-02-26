@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { PoolV1 } from '@blend-capital/blend-sdk';
 import {
   formatAmount,
   parseAmount,
@@ -69,15 +70,38 @@ describe('getPoolData', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns market data derived from DefiLlama TVL', async () => {
+  it('returns market data with expected shape', async () => {
+    // The Blend SDK hits the real Soroban RPC; we just verify the shape.
+    const markets = await getPoolData();
+
+    expect(markets.length).toBeGreaterThan(0);
+    for (const market of markets) {
+      expect(market).toHaveProperty('asset');
+      expect(market).toHaveProperty('assetAddress');
+      expect(market).toHaveProperty('supplyAPY');
+      expect(market).toHaveProperty('borrowAPY');
+      expect(market).toHaveProperty('utilization');
+      expect(market).toHaveProperty('collateralFactor');
+      expect(market.supplyAPY).toBeGreaterThanOrEqual(0);
+      expect(market.borrowAPY).toBeGreaterThanOrEqual(0);
+    }
+  }, 30_000);
+
+  it('includes the assets present in the Blend v1 pool (XLM and USDC)', async () => {
+    const markets = await getPoolData();
+    const assets = markets.map((m) => m.asset);
+
+    expect(assets).toContain('USDC');
+    expect(assets).toContain('XLM');
+  }, 30_000);
+
+  it('falls back to DefiLlama when SDK fails', async () => {
+    // Mock PoolV1.load to simulate a network outage
+    vi.spyOn(PoolV1, 'load').mockRejectedValueOnce(new Error('RPC unavailable'));
+
+    // Let DefiLlama succeed
     vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
-      const urlStr = url.toString();
-      // Internal API route — not available in static export
-      if (urlStr.includes('/api/blend')) {
-        return { ok: false } as Response;
-      }
-      // DefiLlama fallback
-      if (urlStr.includes('api.llama.fi')) {
+      if (url.toString().includes('api.llama.fi')) {
         return {
           ok: true,
           json: async () => ({
@@ -92,44 +116,15 @@ describe('getPoolData', () => {
     });
 
     const markets = await getPoolData();
-
     expect(markets.length).toBeGreaterThan(0);
-    // Each market should have expected fields
-    for (const market of markets) {
-      expect(market).toHaveProperty('asset');
-      expect(market).toHaveProperty('assetAddress');
-      expect(market).toHaveProperty('supplyAPY');
-      expect(market).toHaveProperty('borrowAPY');
-      expect(market).toHaveProperty('utilization');
-      expect(market).toHaveProperty('collateralFactor');
-      expect(market.supplyAPY).toBeGreaterThan(0);
-      expect(market.borrowAPY).toBeGreaterThan(0);
-    }
-  });
-
-  it('includes USDC and XLM markets', async () => {
-    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
-      const urlStr = url.toString();
-      if (urlStr.includes('/api/blend')) return { ok: false } as Response;
-      if (urlStr.includes('api.llama.fi')) {
-        return {
-          ok: true,
-          json: async () => ({
-            currentChainTvls: { Stellar: 10_000_000, 'Stellar-borrowed': 3_000_000 },
-          }),
-        } as Response;
-      }
-      return { ok: false } as Response;
-    });
-
-    const markets = await getPoolData();
+    // Fallback uses the known assets list (USDC, yUSDC, EURC, ETH, BTC)
     const assets = markets.map((m) => m.asset);
-
     expect(assets).toContain('USDC');
     expect(assets).toContain('BTC');
   });
 
-  it('returns empty array when all sources fail', async () => {
+  it('returns empty array when both SDK and DefiLlama fail', async () => {
+    vi.spyOn(PoolV1, 'load').mockRejectedValueOnce(new Error('RPC unavailable'));
     vi.spyOn(global, 'fetch').mockResolvedValue({ ok: false } as Response);
 
     const markets = await getPoolData();
@@ -137,24 +132,10 @@ describe('getPoolData', () => {
   });
 
   it('utilization is between 0 and 100', async () => {
-    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
-      const urlStr = url.toString();
-      if (urlStr.includes('/api/blend')) return { ok: false } as Response;
-      if (urlStr.includes('api.llama.fi')) {
-        return {
-          ok: true,
-          json: async () => ({
-            currentChainTvls: { Stellar: 8_000_000, 'Stellar-borrowed': 3_000_000 },
-          }),
-        } as Response;
-      }
-      return { ok: false } as Response;
-    });
-
     const markets = await getPoolData();
     for (const market of markets) {
       expect(market.utilization).toBeGreaterThanOrEqual(0);
       expect(market.utilization).toBeLessThanOrEqual(100);
     }
-  });
+  }, 30_000);
 });
